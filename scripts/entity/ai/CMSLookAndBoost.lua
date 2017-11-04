@@ -7,8 +7,8 @@ package.path = package.path .. ";mods/CaptainMyShip/scripts/entity/CaptainMyShip
 require ("mods/CaptainMyShip/scripts/entity/ai/CMSBoostToTarget")
 require ("mods/CaptainMyShip/scripts/entity/ai/CMSLookAt")
 
-local lookatdone = false
-local boostdone = false
+local lookatadded = false
+local boostadded = false
 
 function getUpdateInterval()
     return 1
@@ -18,13 +18,17 @@ end
 function update(timeStep)
 
     if onClient() then
-		if not lookatdone then
-			lookatdone = update_lookat(timeStep)
-			boostdone = false
-		elseif (not boostdone and lookatdone) then
-			boostdone = update_boosttotarget(timeStep)
-		elseif (boostdone and lookatdone) then
-			lookatdone = update_lookat(timeStep)
+		if not lookatadded then
+			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSLookAt.lua")
+			lookatadded = true
+			-- boostdone = false
+		elseif (not boostadded and lookatadded and CMSLookAt.done) then
+			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSBoostToTarget.lua")
+			boostadded = true
+		elseif (CMSBoostToTarget.done and CMSLookAt.done) then
+            Entity():removeScript("mods/CaptainMyShip/scripts/entity/ai/CMSBoostToTarget.lua")
+			Entity():removeScript("mods/CaptainMyShip/scripts/entity/ai/CMSLookAt.lua")
 		end
+        print(CMSLookAt.done,CMSBoostToTarget.done)
 	end
 end

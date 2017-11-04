@@ -4,22 +4,26 @@ package.path = package.path .. ";mods/CaptainMyShip/scripts/entity/CaptainMyShip
 
 require ("mods/CaptainMyShip/scripts/entity/ai/CMSLookAt")
 
+-- namespace CMSBoostToTarget
+CMSBoostToTarget = {}
+CMSBoostToTarget.done = false
+
 local intialized = nil
 
-function getUpdateInterval()
+function CMSBoostToTarget.getUpdateInterval()
     return 1
 end
 
-function update(timeStep)
-	local isitdone = update_boosttotarget(timeStep)
+function CMSBoostToTarget.update(timeStep)
+	local isitdone = CMSBoostToTarget.update_boosttotarget(timeStep)
 end
 
 -- this function will be executed every frame on the cient only
-function update_boosttotarget(timeStep)
+function CMSBoostToTarget.update_boosttotarget(timeStep)
 	if (not intialized) then
 		me = Player()
 		mycraft = Entity(me.craftIndex)
-		my_v = Velocity(me.craftIndex) -- Velocity		
+		my_v = Velocity(me.craftIndex) -- Velocity
 		myeng = Engine(me.craftIndex)
 		myenergy = EnergySystem(me.craftIndex)
 
@@ -38,14 +42,14 @@ function update_boosttotarget(timeStep)
     if onClient() then
 		if my_targ and my_targ.index ~= mycraft.index then
 
-			local yaw, pitch = cms_getrottotarget(my_targ)
+			local yaw, pitch = CMSLookAt.cms_getrottotarget(my_targ)
 			local dist_totarg = my_targ:getNearestDistance(mycraft)
 
 			--- heading check; make sure almost looking at right direction
 			if ((math.abs(yaw)<0.2) and (math.abs(pitch)<0.2)) then
-				cms_boostdone = velocitycontroller(5,1)
+				cms_boostdone = CMSBoostToTarget.velocitycontroller(5,1)
 			else
-				mycraft.desiredVelocity = 0	
+				mycraft.desiredVelocity = 0
 				mycraft.controlActions = 0
 				cms_boostdone = true
 			end
@@ -57,7 +61,7 @@ end
 --- =========SUPPORTING FUNCTIONS======== ----------
 
 -- function that breaks down the second into little bits; there maybe another way...
-function velocitycontroller(freq,duty)
+function CMSBoostToTarget.velocitycontroller(freq,duty)
 	local t = 0.05
 	local period = 1/freq
 	local dt_cont = period*duty
@@ -66,10 +70,10 @@ function velocitycontroller(freq,duty)
 	while (t<1) do
 		deferredCallback(t,"controlvelocity")
 		t = t + dt_cont
-	end	
+	end
 end
 
-function controlvelocity()
+function CMSBoostToTarget.controlvelocity()
 	local cur_v = my_v.linear
 	local donecheck = false
 	local my_targ = mycraft.selectedObject
@@ -84,6 +88,7 @@ function controlvelocity()
 		local desiredVelocity=0;
 		if (dist_totarg < 200) then
 			donecheck = true
+            CMSBoostToTarget.done = true
 			desiredVelocity = 0
 			nextVelocity = 0
 			nextDistrange = 1
@@ -102,10 +107,10 @@ function controlvelocity()
 		end
 
 		-- calculate the maximum possible velocity based on set boundaries
-		local distleft = dist_totarg - nextDistrange 
+		local distleft = dist_totarg - nextDistrange
 		local curmaxvel = math.sqrt(nextVelocity^2 + 2*mybrake*distleft)
-		local vel_ratio, vel_error		
-	
+		local vel_ratio, vel_error
+
 		-- find the error and ratio if i want to set to max velocity
 		if curmaxvel then
 			vel_ratio = curmaxvel/myeng.maxVelocity
@@ -114,7 +119,7 @@ function controlvelocity()
 			vel_ratio = 0
 			vel_error = 0
 		end
-			
+
 		local energy_check = myenergy.productionRate-myenergy.requiredEnergy
 		-- take control action
 		if ((vel_error > 0) and (not donecheck)) then
@@ -122,7 +127,7 @@ function controlvelocity()
 				mycraft.desiredVelocity = 1
 				if (energy_check>0) then
 					mycraft.controlActions = 256
-				end				
+				end
 			else
 				mycraft.desiredVelocity = vel_ratio
 				if ((cur_v/desiredVelocity < 0.8) and (energy_check>0)) then

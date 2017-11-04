@@ -1,7 +1,11 @@
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-local yawdone = false
-local pitchdone = false
+-- namespace CMSLookAt
+CMSLookAt = {}
+
+CMSLookAt.yawdone = false
+CMSLookAt.pitchdone = false
+CMSLookAt.done = false
 --[[
 local ControlActionMap = {
   rest = 0,
@@ -22,21 +26,22 @@ local ControlActionMap = {
 --local mycraft = Entity(me.craftIndex)
 local intialized = nil
 
-function getUpdateInterval()
-    return 0.1
+
+function CMSLookAt.getUpdateInterval()
+    return 0.05
 end
 
-function update(timeStep)
-	local isitdone = update_lookat(timeStep)
+function CMSLookAt.update(timeStep)
+	local isitdone = CMSLookAt.update_lookat(timeStep)
 end
 
 -- this function will be executed every frame on the cient only
-function update_lookat(timeStep)
+function CMSLookAt.update_lookat(timeStep)
 
 	if (not intialized) then
 		me = Player()
 		mycraft = Entity(me.craftIndex)
-		my_v = Velocity(me.craftIndex) -- Velocity		
+		my_v = Velocity(me.craftIndex) -- Velocity
 
 		intialized = true
 	end
@@ -46,41 +51,111 @@ function update_lookat(timeStep)
 
     if onClient() then
 		if my_targ and my_targ.index ~= mycraft.index then
-			local yaw, pitch = cms_getrottotarget(my_targ)
+            local myangularvel = my_v.localAngular
+			local yaw, pitch = CMSLookAt.cms_getrottotarget(my_targ)
+            -- local commands = get_command(yaw,pitch)
+            local command = 0
+            local des_yawrate = yaw - myangularvel.y
+            local des_pitchrate = pitch - myangularvel.x
 
-			--- setup controller pulse frequency and duty %
-			local contfreq = 10
-			local contduty = 1
-			--- do yaw and than pitch
-			if not yawdone then
-				trackangle(contfreq,contduty,0,0.025)
-			elseif (yawdone and not pitchdone) then
-				trackangle(contfreq,contduty,1,0.025)
+            if not CMSLookAt.yawdone then
+                if des_yawrate > 0 then
+                    command = command + 4
+                else
+                    command = command + 8
+                end
+            end
+            if not CMSLookAt.pitchdone then
+                if des_pitchrate > 0 then
+                    command = command + 2
+                else
+                    command = command + 1
+                end
+            end
+			mycraft.controlActions = command
+
+--             print("====")
+            -- print(yaw,pitch,mycraft.controlActions)
+
+            -- check if the turns are done
+			if math.abs(yaw) < 0.02 then
+				CMSLookAt.yawdone = true
+			else
+				CMSLookAt.yawdone = false
 			end
 
-			--- check which motions have been done
-			if math.abs(yaw) < 0.025 then
-				yawdone = true
-				cms_lookatdone = false
+			if math.abs(pitch) < 0.02 then
+				CMSLookAt.pitchdone = true
 			else
-				yawdone = false
-				cms_lookatdone = false
+				CMSLookAt.pitchdone = false
 			end
-			if math.abs(pitch) < 0.025 then
-				pitchdone = true
-				cms_lookatdone = true
-			else
-				pitchdone = false
-				cms_lookatdone = false
-			end
+
+            if CMSLookAt.pitchdone and CMSLookAt.yawdone then
+				CMSLookAt.done = true
+            else
+				CMSLookAt.done = false
+            end
+            print(CMSLookAt.pitchdone,CMSLookAt.yawdone,CMSLookAt.done)
+--             print(myangularvel.y,myangularvel.x)
+            -- print(pitch,mycraft.controlActions)
+            -- print(yaw,mycraft.controlActions)
+
+            --[[
+            local yaw_frac = yaw/math.pi
+            local pitch_frac = pitch*(2/math.pi)
+
+
+            -- 0.75 Kp gain on angle errors to get desired rate
+            local des_yawrate = yaw_frac
+            local des_pitchrate = pitch_frac
+
+
+            -- estimate angle error
+            local pitchrate_error = des_pitchrate - myangularvel.x
+            local yawrate_error = des_yawrate - myangularvel.y
+
+            -- set pitch command
+            if (not pitchdone) then
+                if (math.abs(pitchrate_error) > 0.08) then
+                    if (pitchrate_error > 0) then
+                        command = command + 1
+                    elseif (pitchrate_error < 0) then
+                        command = command + 2
+                    end
+                end
+            end
+
+            -- set yaw command
+            if (not yawdone) then
+                if (math.abs(yawrate_error) > 0.08) then
+                    if (yawrate_error > 0) then
+                        command = command + 8
+                    elseif (yawrate_error < 0) then
+                        command = command + 4
+                    end
+                end
+            end
+
+
+			mycraft.controlActions = command
+
+
+            print("=======")
+            print(timeStep,command)
+            print(yaw,pitch)
+            print(des_yawrate,des_pitchrate)
+            print(yawrate_error,pitchrate_error)
+            print(yawdone,pitchdone,cms_lookatdone)
+            print("=======")
+            --]]
 		end
     end
-	return cms_lookatdone
+	-- return cms_lookatdone
 end
 
 --- =========SUPPORTING FUNCTIONS======== ----------
 
-function cms_getrottotarget(target)
+function CMSLookAt.cms_getrottotarget(target)
 	local myori = mycraft.orientation -- Matrix
 	local mypos = mycraft.position.pos
 
@@ -89,86 +164,17 @@ function cms_getrottotarget(target)
 	local unit_vec_totarg = normalize(vec_totarg)
 	local tranformed_unit_vec_totarg = myori:getInverse():transformNormal(unit_vec_totarg) -- THIS TRANSFORMS INERTIAL TO BODY!
 
-	--- get relative euler angles to targer; got this from stackexchage someswhere			
+	--- get relative euler angles to target; got this from stackexchage somewhere
 	local yaw = math.atan2(tranformed_unit_vec_totarg.x,tranformed_unit_vec_totarg.z)
 	local padj = math.sqrt(tranformed_unit_vec_totarg.x^2 + tranformed_unit_vec_totarg.z^2)
 	local pitch = math.atan2(padj, tranformed_unit_vec_totarg.y) - math.pi/2
 	return yaw, pitch
 end
 
-function getSign(x)
+function CMSLookAt.getSign(x)
   return (x<0 and -1) or 1
 end
 
-function stopcont()
+function CMSLookAt.stopcont()
 	mycraft.controlActions = 0
-end
-
--- function that breaks down the second into little bits; there maybe another way...
-function trackangle(freq,duty,angleerror,erroraxis)
-	local t = 0.05
-	local period = 1/freq
-	local dt_cont = period*duty
-
-	while (t<1) do
-		deferredCallback(t,"tracker",angleerror,erroraxis)
-		t = t + dt_cont
-	end	
-	deferredCallback(1,"stopcont")
-end
-
--- this function is to complicating; needs more factoring and simplification
-function tracker(erroraxis,anglethresh)
-	-- set temporary variables to correct control values
-	local ifneg, ifpos, angleerror, anglevel, anglevel_error,desiredrate
-
-	local mypos = mycraft.position.pos
-	local myori = mycraft.orientation -- Matrix
-	local myangularvel = my_v.localAngular
-    local my_targ = mycraft.selectedObject -- Entity
-
-	-- do stuff if i have a target
-	if my_targ and my_targ.index ~= mycraft.index then
-		local yaw, pitch = cms_getrottotarget(my_targ)
-
-		-- do some setup before giving the commands
-		if (erroraxis == 0) then		--yaw axis
-			-- hardcoding yaw commands
-			ifneg = 4
-			ifpos = 8
-			angleerror = yaw
-			anglevel = myangularvel.y
-			errorfraction = math.abs(angleerror)/math.pi
-		elseif (erroraxis == 1) then	--pitch axis
-			-- hardcoding pitch commands
-			ifneg = 2
-			ifpos = 1
-			angleerror = pitch
-			anglevel = myangularvel.x
-			errorfraction = math.abs(angleerror)/math.pi/2
-		end
-		-- find the desired rotation rate
-		local errorfraction = math.abs(angleerror)/math.pi
-		desiredrate = getSign(angleerror)*0.2
-		if (errorfraction > 0.3) then
-			desiredrate = getSign(angleerror)*1
-		elseif (errorfraction > 0.1) then
-			desiredrate = getSign(angleerror)*0.5
-		elseif (math.abs(angleerror)<anglethresh) then
-			desiredrate = 0
-		end
-
-		-- calculate the error between angular velocity
-		anglevel_error = desiredrate - anglevel
-		-- give rotation command
-		if (math.abs(anglevel_error) > 0.08) then
-			if (anglevel_error > 0) then
-				mycraft.controlActions = ifneg
-			elseif (anglevel_error < 0) then
-				mycraft.controlActions = ifpos
-			end
-		else
-			mycraft.controlActions = 0
-		end
-	end
 end
