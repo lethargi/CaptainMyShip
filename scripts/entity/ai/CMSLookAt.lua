@@ -23,7 +23,7 @@ local ControlActionMap = {
 local intialized = nil
 
 function getUpdateInterval()
-    return 1
+    return 0.1
 end
 
 function update(timeStep)

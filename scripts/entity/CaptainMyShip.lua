@@ -63,14 +63,19 @@ function initUI()
 
 	menu:registerWindow(window, "CaptainMyShip")
 
-	local subWindow = window:createWindow(Rect(vec2(10, 10), size - 10))
-	subWindow.center = window.center
-	numButtons = 0
+	local tabbedWindow = window:createTabbedWindow(Rect(vec2(10, 10), size - 10))
+    local tab = tabbedWindow:createTab("Entity", "data/textures/icons/winged-shield.png", "Ship Commands")
 
-	subWindow:createButton(ButtonRect(), "RemoveOrders", "onIdleButtonPressed")
-	subWindow:createButton(ButtonRect(), "LookAt", "onLookAtPressed")
-	subWindow:createButton(ButtonRect(), "Boost2Targ", "boosttotargetButtonPressed")
-	subWindow:createButton(ButtonRect(), "LookAndBoost", "lookandboostButtonPressed")
+    numButtons = 0
+-- 	local subWindow = menu:createWindow(Rect(vec2(10, 10), size - 10))
+-- 	subWindow.center = window.center
+-- 	numButtons = 0
+
+	tab:createButton(ButtonRect(), "RemoveOrders", "onIdleButtonPressed")
+	tab:createButton(ButtonRect(), "LookAt", "onLookAtPressed")
+	tab:createButton(ButtonRect(), "Boost2Targ", "boosttotargetButtonPressed")
+	tab:createButton(ButtonRect(), "LookAndBoost", "lookandboostButtonPressed")
+
 end
 
 function cms_checkCaptain()
