@@ -5,25 +5,8 @@ CMSLookAt = {}
 
 local CMS = require("mods/CaptainMyShip/scripts/entity/ai/CMSlib")
 
---[[
-local ControlActionMap = {
-  rest = 0,
-  pitchup = 1,
-  pitchdown = 2,
-  yawleft = 4,
-  yawright = 8,
-  rollccw = 16,
-  rollcw = 32,
-  boost = 256,
-  transup = 2048,
-  transdown = 4096,
-  transleft = 512,
-  transright = 1024
-}
---]]
-
 function CMSLookAt.getUpdateInterval()
-    return 0.02
+    return 0.025
 end
 
 function CMSLookAt.update(timeStep)
@@ -41,8 +24,7 @@ function CMSLookAt.update_lookat(timeStep)
         local my_targ = mycraft.selectedObject
 
 		if my_targ and my_targ.index ~= mycraft.index then
-			local yaw, pitch = CMS.getYawPitchToTarget(my_targ)
-            CMS.headingControl(yaw,pitch)
+            CMS.headingControlToTarget(my_targ)
 		end
     end
 end
