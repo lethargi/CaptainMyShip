@@ -45,17 +45,17 @@ function interactionPossible(playerIndex, option)
     -- ordering other crafts can only work on your own crafts
     if Faction().index ~= playerIndex then
         return false
-    end	
+    end
     return true
 end
 
 -- create all required UI elements for the client side
 function initUI()
 	local res = getResolution()
-	local size = vec2(250, 300)
+	local size = vec2(250, 400)
 
 	local menu = ScriptUI()
-	window = menu:createWindow(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5))  
+	window = menu:createWindow(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5))
 
 	window.caption = "CaptainMyShip"
 	window.showCloseButton = 1
@@ -75,6 +75,7 @@ function initUI()
 	tab:createButton(ButtonRect(), "LookAt", "onLookAtPressed")
 	tab:createButton(ButtonRect(), "Boost2Targ", "boosttotargetButtonPressed")
 	tab:createButton(ButtonRect(), "LookAndBoost", "lookandboostButtonPressed")
+	tab:createButton(ButtonRect(), "RetroBurn", "retroburnButtonPressed")
 
 end
 
@@ -129,7 +130,20 @@ function lookandboostButtonPressed()
 		if cms_checkCaptain() then
 			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSLookAndBoost.lua")
 		else
-	        invokeServerFunction("printnocaptain")		
+	        invokeServerFunction("printnocaptain")
+		end
+        ScriptUI():stopInteraction()
+		return
+	end
+end
+
+function retroburnButtonPressed()
+	removeSpecialOrders()
+    if onClient() then
+		if cms_checkCaptain() then
+			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSRetroBurn.lua")
+		else
+	        invokeServerFunction("printnocaptain")
 		end
         ScriptUI():stopInteraction()
 		return

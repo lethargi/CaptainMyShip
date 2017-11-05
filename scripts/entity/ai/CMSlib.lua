@@ -24,12 +24,12 @@ function CMSlib.getYawPitchToTarget(target)
 
 	local targ_pos = target.position.pos
 	local uvectotarg_ins = CMSlib.getUvecToPos(targ_pos)
-	local uvectotarg_bdy = CMSlib.transfromInsToBdy(uvectotarg_ins)
+	local uvectotarg_bdy = CMSlib.transformInsToBdy(uvectotarg_ins)
 
     return CMSlib.getYawPitchToVec(uvectotarg_bdy)
 end
 
-function CMSlib.transfromInsToBdy(invec)
+function CMSlib.transformInsToBdy(invec)
 	local myori = mycraft.orientation -- Matrix
     local T_ins2bdy = myori:getInverse()
 	local outvec = T_ins2bdy:transformNormal(invec) -- THIS TRANSFORMS INERTIAL TO BODY!
@@ -76,8 +76,8 @@ function CMSlib.initialize()
     CMSlib.zeroedcontrol = false
 
     CMSlib.distanceControlDone = false
+    CMSlib.thrusterBrakeDone = false
 end
-
 ----------------- CONTROLLERS
 
 
@@ -87,13 +87,14 @@ function CMSlib.headingControlToTarget(atarget)
     CMSlib.headingControl(yaw,pitch)
 end
 
-function CMSlib.headingControl(inyaw,inpitch)
+function CMSlib.headingControl(inyaw,inpitch,inKp_rate)
 
     local command = 0
     local myangularvel = my_v.localAngular
 
-    local des_yawrate = 2*(inyaw - myangularvel.y)
-    local des_pitchrate = 2*(inpitch - myangularvel.x)
+    local Kp_rate = inKp_rate or 2
+    local des_yawrate = Kp_rate*(inyaw - myangularvel.y)
+    local des_pitchrate = Kp_rate*(inpitch - myangularvel.x)
 
     if not CMSlib.yawdone then
         if math.abs(des_yawrate) > 0.01 then
@@ -125,10 +126,10 @@ function CMSlib.headingControl(inyaw,inpitch)
     -- print(CMSlib.yawdone,CMSlib.pitchdone,CMSlib.turnDone,mycraft.controlActions)
 end
 
-function CMSlib.turnCheck(inyaw,inpitch)
+function CMSlib.turnCheck(inyaw,inpitch,thresh)
     -- check if the turns are done
-    local yawthresh = 0.025
-    local pitchthresh = 0.025
+    local yawthresh = thresh or 0.025
+    local pitchthresh = thresh or 0.025
     if math.abs(inyaw) < yawthresh then
         CMSlib.yawdone = true
     else
@@ -217,7 +218,7 @@ function CMSlib.speedControl(desiredVelocity,useboost)
         else
             mycraft.controlActions = 0
         end
-    elseif not zeroedcontrol then
+    elseif not CMSlib.zeroedcontrol then
         mycraft.desiredVelocity = 0
         mycraft.controlActions = 0
         CMSlib.zeroedcontrol = true
@@ -226,29 +227,27 @@ end
 
 function CMSlib.thrusterBrake(useboost)
     -- find the error and ratio if i want to set to max velocity
-    local vel_ratio, vel_error
     local cur_v = my_v.linear
     local energy_check = myenergy.productionRate-myenergy.requiredEnergy
 
     -- take control action
     if (cur_v > 0.2*myeng.maxVelocity) then
-        mycraft.desiredVelocity = vel_ratio
+        CMSlib.thrusterBrakeDone = false
+        CMSlib.zeroedcontrol = false
+        mycraft.desiredVelocity = 1
 
         -- boosting logic
         if (cur_v > 0.3*myeng.maxVelocity) and useboost and (energy_check>0) then
-            -- if ((vel_error > 0) and ((vel_ratio > 1) or  (cur_v/desiredVelocity < 0.8))) then
             mycraft.controlActions = 256
-            -- else
-                -- mycraft.controlActions = 0
-            -- end
         else
             mycraft.controlActions = 0
         end
-    elseif (cur_v > 0) then
-        mycraft.desiredVelocity = cur_v/myeng.maxVelocity
-    elseif not zeroedcontrol then
+--     elseif (cur_v > 0.2*myeng.maxVelocity) then
+--         mycraft.desiredVelocity = 1
+    elseif not CMSlib.zeroedcontrol then
         mycraft.desiredVelocity = 0
         mycraft.controlActions = 0
+        CMSlib.thrusterBrakeDone = true
         CMSlib.zeroedcontrol = true
     end
 end
