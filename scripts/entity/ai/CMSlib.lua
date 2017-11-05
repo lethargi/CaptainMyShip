@@ -13,10 +13,10 @@ local ControlActionMap = {
   rollccw = 16,
   rollcw = 32,
   boost = 256,
-  transup = 2048,
-  transdown = 4096,
   transleft = 512,
   transright = 1024
+  transup = 2048,
+  transdown = 4096,
 }
 --]]
 
@@ -151,14 +151,6 @@ function CMSlib.turnCheck(inyaw,inpitch,thresh)
         CMSlib.zeroedcontrol = false
     end
 
---     if CMSlib.pitchdone and CMSlib.yawdone then
---         CMSlib.turnDone = true
---     else
---         CMSlib.turnDone = false
---         CMSlib.zeroedcontrol = false
---     end
-    -- print("turncheck",inyaw,inpitch,CMSlib.yawdone,CMSlib.pitchdone,CMSlib.turnDone)
-
 end
 
 --------------- SPEED/position CONTROL
@@ -242,13 +234,31 @@ function CMSlib.thrusterBrake(useboost)
         else
             mycraft.controlActions = 0
         end
---     elseif (cur_v > 0.2*myeng.maxVelocity) then
---         mycraft.desiredVelocity = 1
     elseif not CMSlib.zeroedcontrol then
         mycraft.desiredVelocity = 0
         mycraft.controlActions = 0
         CMSlib.thrusterBrakeDone = true
         CMSlib.zeroedcontrol = true
+    end
+end
+
+function CMSlib.retroBurn(useboost)
+    local cur_v = my_v.linear
+    if cur_v/myeng.brakeThrust > 1  then
+        local Vuvec = normalize(my_v.velocityf)
+        local retrouvec = Vuvec:__unm()
+        local retrouvec_bdy = CMSlib.transformInsToBdy(retrouvec)
+
+        local yaw,pitch  = CMSlib.getYawPitchToVec(retrouvec_bdy)
+        CMSlib.turnCheck(yaw,pitch,0.3)
+        if not CMSlib.turnDone then
+            CMSlib.headingControl(yaw,pitch,8)
+            mycraft.desiredVelocity = 0
+        else
+            CMSlib.thrusterBrake(useboost)
+        end
+    else
+        mycraft.controlActions = 0
     end
 end
 

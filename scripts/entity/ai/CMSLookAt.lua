@@ -14,7 +14,7 @@ function CMSLookAt.update(timeStep)
 end
 
 function CMSLookAt.initialize()
-    CMSlib.initialize()
+    CMS.initialize()
 end
 
 -- this function will be executed every frame on the cient only

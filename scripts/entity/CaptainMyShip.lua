@@ -49,6 +49,23 @@ function interactionPossible(playerIndex, option)
     return true
 end
 
+function onShowWindow()
+    local entity = Entity()
+
+--     print("===BEFORE===")
+--     for index, name in pairs(entity:getScripts()) do
+--         print(index,name)
+--     end
+	removeSpecialOrders()
+--     print("===AFTER===")
+--     for index, name in pairs(entity:getScripts()) do
+--         print(index,name)
+--     end
+
+    entity.controlActions = 0
+    entity.desiredVelocity = 0
+end
+
 -- create all required UI elements for the client side
 function initUI()
 	local res = getResolution()
@@ -76,7 +93,7 @@ function initUI()
 	tab:createButton(ButtonRect(), "Boost2Targ", "boosttotargetButtonPressed")
 	tab:createButton(ButtonRect(), "LookAndBoost", "lookandboostButtonPressed")
 	tab:createButton(ButtonRect(), "RetroBurn", "retroburnButtonPressed")
-
+	tab:createButton(ButtonRect(), "CollisionRadar", "collisionradarButtonPressed")
 end
 
 function cms_checkCaptain()
@@ -117,7 +134,7 @@ function boosttotargetButtonPressed()
 		if cms_checkCaptain() then
 			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSBoostToTarget.lua")
 		else
-	        invokeServerFunction("printnocaptain")		
+	        invokeServerFunction("printnocaptain")
 		end
         ScriptUI():stopInteraction()
 		return
@@ -142,6 +159,19 @@ function retroburnButtonPressed()
     if onClient() then
 		if cms_checkCaptain() then
 			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSRetroBurn.lua")
+		else
+	        invokeServerFunction("printnocaptain")
+		end
+        ScriptUI():stopInteraction()
+		return
+	end
+end
+
+function collisionradarButtonPressed()
+	removeSpecialOrders()
+    if onClient() then
+		if cms_checkCaptain() then
+			Entity():addScript("mods/CaptainMyShip/scripts/entity/ai/CMSCollisionRadar.lua")
 		else
 	        invokeServerFunction("printnocaptain")
 		end
