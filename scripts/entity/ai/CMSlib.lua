@@ -162,6 +162,7 @@ function CMSlib.distanceControlToTarget(atarget,approachdist,useboost)
     if CMSlib.turnDone then
         CMSlib.distanceControl(dist_totarg,approachdist,useboost)
     end
+    print(dist_totarg,CMSlib.distanceControlDone,CMSlib.turnDone,mycraft.controlActions)
 end
 
 function CMSlib.distanceControl(distanceToPoint,stopdistance,useboost)
@@ -178,15 +179,23 @@ function CMSlib.distanceControl(distanceToPoint,stopdistance,useboost)
 
     local a = (2 * traveldistance)/cur_v
     local b = (2 * traveldistance)/desiredVelocity
-    local timetopoint = math.max(a,b)
+    local c = (2 * traveldistance)/myeng.maxVelocity
+    local timetopoint = math.min(a,b,c)
     -- print(desiredVelocity,distanceToPoint,stopdistance,mybrake,myeng.brakeThrust)
     --only use boost if more than 10 seconds of travel time
-    if timetopoint > 20 then
+    local timelimit
+    if cur_v/myeng.maxVelocity > 1 then
+        timelimit = 15
+    else
+        timelimit = 10
+    end
+
+    if timetopoint > timelimit then
         CMSlib.speedControl(desiredVelocity,useboost)
     else
         CMSlib.speedControl(desiredVelocity,false)
     end
-    -- print(timetopoint)
+    print(timetopoint)
 end
 
 CMSlib.acclsEstim = 0

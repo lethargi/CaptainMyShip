@@ -6,7 +6,7 @@ CMSLookAndBoost = {}
 local CMS = require("mods/CaptainMyShip/scripts/entity/ai/CMSlib")
 
 local turningUpdateRate = 0.025
-local boostingUpdateRate = 0.5
+local boostingUpdateRate = 0.25
 local restingUpdateRate = 1.0
 
 local updateRate = restingUpdateRate
