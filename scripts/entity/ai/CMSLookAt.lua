@@ -24,6 +24,7 @@ function CMSLookAt.update_lookat(timeStep)
         local my_targ = mycraft.selectedObject
 
 		if my_targ and my_targ.index ~= mycraft.index then
+            mycraft.controlActions = 0
             CMS.headingControlToTarget(my_targ)
 		end
     end

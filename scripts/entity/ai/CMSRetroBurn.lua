@@ -19,6 +19,9 @@ end
 
 function CMSRetroBurn.update(timeStep)
     if onClient() then
+        mycraft.controlActions = 0
+        mycraft.desiredVelocity = 0
         CMS.retroBurn(true)
+        print(mycraft.controlActions,mycraft.desiredVelocity)
     end
 end

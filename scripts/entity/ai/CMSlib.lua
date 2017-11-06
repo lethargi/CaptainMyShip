@@ -89,7 +89,7 @@ end
 
 function CMSlib.headingControl(inyaw,inpitch,inKp_rate)
 
-    local command = 0
+    -- local command = 0
     local myangularvel = my_v.localAngular
 
     local Kp_rate = inKp_rate or 2
@@ -99,29 +99,29 @@ function CMSlib.headingControl(inyaw,inpitch,inKp_rate)
     if not CMSlib.yawdone then
         if math.abs(des_yawrate) > 0.01 then
             if des_yawrate > 0 then
-                command = command + 4
+                mycraft.controlActions = mycraft.controlActions + 4
             else
-                command = command + 8
+                mycraft.controlActions = mycraft.controlActions + 8
             end
         end
     end
     if not CMSlib.pitchdone then
         if math.abs(des_pitchrate) > 0.01 then
             if des_pitchrate > 0 then
-                command = command + 2
+                mycraft.controlActions = mycraft.controlActions + 2
             else
-                command = command + 1
+                mycraft.controlActions = mycraft.controlActions + 1
             end
         end
     end
 
     -- apply control action
-    if not CMSlib.turnDone then
-        mycraft.controlActions = command
-    elseif not CMSlib.zeroedcontrol then
-        mycraft.controlActions = 0
-        CMSlib.zeroedcontrol = true
-    end
+--     if not CMSlib.turnDone then
+--         mycraft.controlActions = command
+--     elseif not CMSlib.zeroedcontrol then
+--         mycraft.controlActions = 0
+--         CMSlib.zeroedcontrol = true
+--     end
 
     -- print(CMSlib.yawdone,CMSlib.pitchdone,CMSlib.turnDone,mycraft.controlActions)
 end
@@ -203,62 +203,41 @@ function CMSlib.speedControl(desiredVelocity,useboost)
         -- boosting logic
         if (energy_check>0) and useboost then
             if ((vel_error > 0) and ((vel_ratio > 1) or  (cur_v/desiredVelocity < 0.8))) then
-                mycraft.controlActions = 256
-            else
-                mycraft.controlActions = 0
+                mycraft.controlActions = mycraft.controlActions + 256
+--             else
+--                 mycraft.controlActions = 0
             end
-        else
-            mycraft.controlActions = 0
+--         else
+--             mycraft.controlActions = 0
         end
     elseif not CMSlib.zeroedcontrol then
         mycraft.desiredVelocity = 0
-        mycraft.controlActions = 0
-        CMSlib.zeroedcontrol = true
-    end
-end
-
-function CMSlib.thrusterBrake(useboost)
-    -- find the error and ratio if i want to set to max velocity
-    local cur_v = my_v.linear
-    local energy_check = myenergy.productionRate-myenergy.requiredEnergy
-
-    -- take control action
-    if (cur_v > 0.2*myeng.maxVelocity) then
-        CMSlib.thrusterBrakeDone = false
-        CMSlib.zeroedcontrol = false
-        mycraft.desiredVelocity = 1
-
-        -- boosting logic
-        if (cur_v > 0.3*myeng.maxVelocity) and useboost and (energy_check>0) then
-            mycraft.controlActions = 256
-        else
-            mycraft.controlActions = 0
-        end
-    elseif not CMSlib.zeroedcontrol then
-        mycraft.desiredVelocity = 0
-        mycraft.controlActions = 0
-        CMSlib.thrusterBrakeDone = true
+        -- mycraft.controlActions = 0
         CMSlib.zeroedcontrol = true
     end
 end
 
 function CMSlib.retroBurn(useboost)
     local cur_v = my_v.linear
-    if cur_v/myeng.brakeThrust > 1  then
+    local energy_check = myenergy.productionRate-myenergy.requiredEnergy
+    print(cur_v/myeng.brakeThrust)
+    if (cur_v/myeng.brakeThrust > 1)  then
         local Vuvec = normalize(my_v.velocityf)
         local retrouvec = Vuvec:__unm()
         local retrouvec_bdy = CMSlib.transformInsToBdy(retrouvec)
 
         local yaw,pitch  = CMSlib.getYawPitchToVec(retrouvec_bdy)
-        CMSlib.turnCheck(yaw,pitch,0.3)
-        if not CMSlib.turnDone then
-            CMSlib.headingControl(yaw,pitch,8)
-            mycraft.desiredVelocity = 0
-        else
-            CMSlib.thrusterBrake(useboost)
+        CMSlib.turnCheck(yaw,pitch)
+        CMSlib.headingControl(yaw,pitch,8)
+        if ((math.abs(yaw) < 0.4) and (math.abs(pitch) < 0.4)) then
+            local a = 1 - (math.abs(yaw)-0.025)/(0.375)  --becomes bigger as heading approaches target
+            local b = cur_v/myeng.maxVelocity   -- value of the current velocity ratio
+            -- print(a,b,math.abs(yaw))
+            mycraft.desiredVelocity = math.min(a,b)
+            if (cur_v > 0.75*myeng.maxVelocity) and useboost and (energy_check>0) then
+                mycraft.controlActions = mycraft.controlActions + 256
+            end
         end
-    else
-        mycraft.controlActions = 0
     end
 end
 

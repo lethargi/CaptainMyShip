@@ -24,6 +24,7 @@ function CMSLookAndBoost.update(timeStep)
     if onClient() then
         local my_targ = mycraft.selectedObject
 		if my_targ and my_targ.index ~= mycraft.index then
+            mycraft.controlActions = 0
             if not CMS.turnDone then
                 updateRate = turningUpdateRate
                 CMS.headingControlToTarget(my_targ)

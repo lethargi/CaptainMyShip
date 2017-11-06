@@ -16,6 +16,7 @@ function CMSBoostToTarget.update(timeStep)
 
     if onClient() then
 		if my_targ and my_targ.index ~= mycraft.index then
+            mycraft.controlActions = 0
             CMS.distanceControlToTarget(my_targ)
 		end
     end
