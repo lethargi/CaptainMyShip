@@ -55,9 +55,7 @@ function CMSlib.getSign(x)
   return (x<0 and -1) or 1
 end
 
--- CMSlib.initalized = false
 function CMSlib.initialize()
-	-- if (not CMSlib.intialized) then
     me = Player()
     mycraft = Entity(me.craftIndex)
     my_v = Velocity(me.craftIndex) -- Velocity
@@ -68,8 +66,6 @@ function CMSlib.initialize()
     myaccl = myeng.acceleration
     mybrake = myeng.brakeThrust
 
-    -- CMSlib.initalized = true
-	-- end
     CMSlib.yawdone = false
     CMSlib.pitchdone = false
     CMSlib.turnDone = false
@@ -115,15 +111,6 @@ function CMSlib.headingControl(inyaw,inpitch,inKp_rate)
         end
     end
 
-    -- apply control action
---     if not CMSlib.turnDone then
---         mycraft.controlActions = command
---     elseif not CMSlib.zeroedcontrol then
---         mycraft.controlActions = 0
---         CMSlib.zeroedcontrol = true
---     end
-
-    -- print(CMSlib.yawdone,CMSlib.pitchdone,CMSlib.turnDone,mycraft.controlActions)
 end
 
 function CMSlib.turnCheck(inyaw,inpitch,thresh)
@@ -143,10 +130,8 @@ function CMSlib.turnCheck(inyaw,inpitch,thresh)
     end
 
     if CMSlib.pitchdone and CMSlib.yawdone then
-        -- CMSlib.takeTurnAction = false
         CMSlib.turnDone = true
     elseif ((math.abs(inpitch) > pitchthresh*1.75) or (math.abs(inyaw) > yawthresh*1.75)) then
-        -- CMSlib.takeTurnAction = true
         CMSlib.turnDone = false
         CMSlib.zeroedcontrol = false
     end
@@ -160,12 +145,10 @@ function CMSlib.distanceControlToTarget(atarget)
     CMSlib.turnCheck(yaw,pitch)
     local dist_totarg = atarget:getNearestDistance(mycraft)
 
-    -- if ((math.abs(yaw)<0.1) and (math.abs(pitch)<0.1)) then
     if CMSlib.turnDone then
         CMSlib.distanceControl(dist_totarg,300,true)
     else
         mycraft.desiredVelocity = 0
---         mycraft.controlActions = 0
     end
 end
 
@@ -204,11 +187,7 @@ function CMSlib.speedControl(desiredVelocity,useboost)
         if (energy_check>0) and useboost then
             if ((vel_error > 0) and ((vel_ratio > 1) or  (cur_v/desiredVelocity < 0.8))) then
                 mycraft.controlActions = mycraft.controlActions + 256
---             else
---                 mycraft.controlActions = 0
             end
---         else
---             mycraft.controlActions = 0
         end
     elseif not CMSlib.zeroedcontrol then
         mycraft.desiredVelocity = 0
@@ -232,8 +211,10 @@ function CMSlib.retroBurn(useboost)
         if ((math.abs(yaw) < 0.4) and (math.abs(pitch) < 0.4)) then
             local a = 1 - (math.abs(yaw)-0.025)/(0.375)  --becomes bigger as heading approaches target
             local b = cur_v/myeng.maxVelocity   -- value of the current velocity ratio
-            -- print(a,b,math.abs(yaw))
-            mycraft.desiredVelocity = math.min(a,b)
+            if (b < 0.5) then
+                a = 0.5*a
+            end
+            mycraft.desiredVelocity = a
             if (cur_v > 0.75*myeng.maxVelocity) and useboost and (energy_check>0) then
                 mycraft.controlActions = mycraft.controlActions + 256
             end
