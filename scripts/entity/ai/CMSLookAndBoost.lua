@@ -22,6 +22,8 @@ end
 -- this function will be executed every frame on the cient only
 function CMSLookAndBoost.update(timeStep)
     if onClient() then
+        mycraft.controlActions = 0
+        mycraft.desiredVelocity = 0
         local my_targ = mycraft.selectedObject
 		if my_targ and my_targ.index ~= mycraft.index then
             mycraft.controlActions = 0

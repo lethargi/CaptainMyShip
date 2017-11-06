@@ -64,7 +64,14 @@ function CMSlib.initialize()
     myenergy = EnergySystem(me.craftIndex)
 
     myaccl = myeng.acceleration
-    mybrake = myeng.brakeThrust
+    -- mybrake = myeng.brakeThrust
+    if myeng.brakeThrust > 0 then
+        mybrake = myeng.brakeThrust
+    else
+        -- need to do this as the effect of inertia dampeners are not accounted
+        mybrake = 0.75*myeng.acceleration
+    end
+
 
     CMSlib.yawdone = false
     CMSlib.pitchdone = false
@@ -73,6 +80,10 @@ function CMSlib.initialize()
 
     CMSlib.distanceControlDone = false
     CMSlib.thrusterBrakeDone = false
+
+    CMSlib.acclsEstim = 0
+    CMSlib.v_i = my_v.linear
+    CMSlib.v_ip1 = 0
 end
 ----------------- CONTROLLERS
 
@@ -140,28 +151,54 @@ end
 
 --------------- SPEED/position CONTROL
 
-function CMSlib.distanceControlToTarget(atarget)
+function CMSlib.distanceControlToTarget(atarget,approachdist,useboost)
+    local approachdist = approachdist or 300
+    local useboost = useboost or true
+
     local yaw, pitch = CMSlib.getYawPitchToTarget(atarget)
     CMSlib.turnCheck(yaw,pitch)
     local dist_totarg = atarget:getNearestDistance(mycraft)
 
     if CMSlib.turnDone then
-        CMSlib.distanceControl(dist_totarg,300,true)
-    else
-        mycraft.desiredVelocity = 0
+        CMSlib.distanceControl(dist_totarg,approachdist,useboost)
     end
 end
 
 function CMSlib.distanceControl(distanceToPoint,stopdistance,useboost)
     local desiredVelocity
+    local cur_v = my_v.linear
+    local traveldistance = distanceToPoint-stopdistance
     if (distanceToPoint < stopdistance) then
         CMSlib.distanceControlDone = true
         desiredVelocity = 0
     else
         CMSlib.distanceControlDone = false
-        desiredVelocity = math.sqrt(2*mybrake*(distanceToPoint-stopdistance))
+        desiredVelocity = math.sqrt(2*mybrake*(traveldistance))
     end
-    CMSlib.speedControl(desiredVelocity,useboost)
+
+    local a = (2 * traveldistance)/cur_v
+    local b = (2 * traveldistance)/desiredVelocity
+    local timetopoint = math.max(a,b)
+    -- print(desiredVelocity,distanceToPoint,stopdistance,mybrake,myeng.brakeThrust)
+    --only use boost if more than 10 seconds of travel time
+    if timetopoint > 20 then
+        CMSlib.speedControl(desiredVelocity,useboost)
+    else
+        CMSlib.speedControl(desiredVelocity,false)
+    end
+    -- print(timetopoint)
+end
+
+CMSlib.acclsEstim = 0
+CMSlib.v_i = 0
+CMSlib.v_ip1 = 0
+
+function CMSlib.estimAccls(timeStep)
+    local cur_v = my_v.linear
+    CMSlib.v_ip1 = cur_v
+    CMSlib.acclsEstim = (CMSlib.v_ip1 - CMSlib.v_i)/timeStep
+    CMSlib.v_i = CMSlib.v_ip1
+    print(CMSlib.v_i,CMSlib.v_ip1,CMSlib.acclsEstim)
 end
 
 function CMSlib.speedControl(desiredVelocity,useboost)
@@ -169,6 +206,7 @@ function CMSlib.speedControl(desiredVelocity,useboost)
     local vel_ratio, vel_error
     local cur_v = my_v.linear
     local energy_check = myenergy.productionRate-myenergy.requiredEnergy
+
 
     if desiredVelocity then
         CMSlib.zeroedcontrol = false
@@ -189,17 +227,18 @@ function CMSlib.speedControl(desiredVelocity,useboost)
                 mycraft.controlActions = mycraft.controlActions + 256
             end
         end
-    elseif not CMSlib.zeroedcontrol then
-        mycraft.desiredVelocity = 0
-        -- mycraft.controlActions = 0
-        CMSlib.zeroedcontrol = true
+--     elseif not CMSlib.zeroedcontrol then
+--         mycraft.desiredVelocity = 0
+--         -- mycraft.controlActions = 0
+--         CMSlib.zeroedcontrol = true
     end
+
 end
 
 function CMSlib.retroBurn(useboost)
     local cur_v = my_v.linear
     local energy_check = myenergy.productionRate-myenergy.requiredEnergy
-    print(cur_v/myeng.brakeThrust)
+    -- print(cur_v/myeng.brakeThrust)
     if (cur_v/myeng.brakeThrust > 1)  then
         local Vuvec = normalize(my_v.velocityf)
         local retrouvec = Vuvec:__unm()
